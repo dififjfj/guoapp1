@@ -109,6 +109,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _controlBarLeft = false;
   int _gestureSensitivity = 1;
   bool _haptics = true;
+  bool _locked = false;
   bool _automaticFullscreenSuppressed = false;
   bool _panelOpen = false;
   int _mobileTab = 0;
@@ -1369,6 +1370,7 @@ class _PlayerScreenState extends State<PlayerScreen>
               showDanmaku: widget.detail.drama.source == 'hongguo',
               danmakuStatus: _danmaku.status,
               onRetryDanmaku: _danmaku.canRetry ? _danmaku.retry : null,
+              onGestureHelp: () => showPlayerGestureHelp(menuContext),
               preloadStatus: _preloader.status,
               enhancement: _enhancementForUi,
               onCompareEnhancement: () {
@@ -1709,7 +1711,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final title =
         '${widget.detail.drama.title} · 第 ${widget.detail.episodes[_index].number} 集${_plan?.local == true ? ' · 本地' : ''}${widget.detail.episodes[_index].vip ? ' · VIP 试看' : ''}${(_plan?.routeIndex ?? 0) > 0 ? ' · 线路 ${_plan!.routeIndex + 1}' : ''}';
     final hideOverlayForPictureInPicture = _pictureInPictureVisible;
-    final Widget controls = hideOverlayForPictureInPicture
+    final Widget controls = hideOverlayForPictureInPicture || _locked
         ? const SizedBox.shrink()
         : _television
         ? TelevisionControls(
@@ -1772,6 +1774,26 @@ class _PlayerScreenState extends State<PlayerScreen>
       children: [
         if (!hideOverlayForPictureInPicture)
           DanmakuOverlay(controller: _danmaku, aspectRatio: _aspectRatio),
+        if (_mobile && !_showFullscreen)
+          PlayerSidePill(
+            player: _player,
+            left: _controlBarLeft,
+            episodeLabel:
+                '${widget.detail.episodes[_index].number} / ${widget.detail.episodes.length}',
+            showDanmaku: widget.detail.drama.source == 'hongguo',
+            danmakuEnabled: _danmakuEnabled,
+            locked: _locked,
+            onTogglePlayback: _togglePlayback,
+            onDanmaku: widget.detail.drama.source == 'hongguo'
+                ? _toggleDanmaku
+                : null,
+            onRotate: _rotate,
+            onLock: () {
+              _interactions.cancel();
+              setState(() => _locked = true);
+            },
+            onUnlock: () => setState(() => _locked = false),
+          ),
         controls,
       ],
     );

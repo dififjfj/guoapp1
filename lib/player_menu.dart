@@ -11,6 +11,46 @@ import 'diary_service.dart';
 
 enum PlayerMenuSection { episodes, speed, quality, settings }
 
+void showPlayerGestureHelp(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('手势操作说明'),
+      content: const SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('上半区长按：呼出播放菜单（选集/收藏/倍速/画质）'),
+            SizedBox(height: 8),
+            Text('下半区长按：临时 2 倍速，松手恢复'),
+            SizedBox(height: 8),
+            Text('长按后横滑：微调播放进度，松手跳转'),
+            SizedBox(height: 8),
+            Text('上下滑动：翻上一集 / 下一集'),
+            SizedBox(height: 8),
+            Text('左侧上下滑：调节屏幕亮度'),
+            SizedBox(height: 8),
+            Text('单击屏幕：显示 / 隐藏控制栏'),
+            SizedBox(height: 8),
+            Text('双击屏幕：播放 / 暂停'),
+            SizedBox(height: 8),
+            Text('播放页按钮：竖屏播放 / 旋转与全屏'),
+            SizedBox(height: 8),
+            Text('锁定屏幕：侧边胶囊的锁图标，锁定后仅长按 2 倍速可用'),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('知道了'),
+        ),
+      ],
+    ),
+  );
+}
+
 class PlayerMenu extends StatefulWidget {
   const PlayerMenu({
     super.key,
@@ -32,6 +72,7 @@ class PlayerMenu extends StatefulWidget {
     this.preloadStatus = '',
     this.enhancement,
     this.onCompareEnhancement,
+    this.onGestureHelp,
   });
 
   final PlayerMenuSection section;
@@ -49,6 +90,7 @@ class PlayerMenu extends StatefulWidget {
   final String preloadStatus;
   final VideoEnhancementController? enhancement;
   final VoidCallback? onCompareEnhancement;
+  final VoidCallback? onGestureHelp;
   final ValueChanged<int> onEpisode;
   final Future<void> Function(PlaybackPreferences) onPreferences;
   final Future<void> Function() onFavorite;
@@ -107,6 +149,12 @@ class _PlayerMenuState extends State<PlayerMenu> {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
+                  if (widget.onGestureHelp != null)
+                    IconButton(
+                      tooltip: '手势操作说明',
+                      onPressed: widget.onGestureHelp,
+                      icon: const Icon(Icons.touch_app_rounded),
+                    ),
                   IconButton(
                     tooltip: '关闭菜单',
                     onPressed: () => Navigator.pop(context),

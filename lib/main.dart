@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -216,15 +217,24 @@ class DuanjuApp extends StatelessWidget {
     builder: (_, _) => _application(),
   );
 
-  Widget _application() => MaterialApp(
-    navigatorKey: navigatorKey,
+  Widget _application() => DynamicColorBuilder(
+    builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+      final useDynamicColor = store?.dynamicColor ?? false;
+      return MaterialApp(
+        navigatorKey: navigatorKey,
     title: appName,
     debugShowCheckedModeBanner: false,
     locale: const Locale('zh', 'CN'),
     supportedLocales: const [Locale('zh', 'CN')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: AppTheme.light,
-    darkTheme: AppTheme.dark,
+    theme: AppTheme.theme(
+      Brightness.light,
+      dynamicScheme: useDynamicColor ? lightDynamic : null,
+    ),
+    darkTheme: AppTheme.theme(
+      Brightness.dark,
+      dynamicScheme: useDynamicColor ? darkDynamic : null,
+    ),
     themeMode: AppTheme.mode(store?.themeMode ?? 'system'),
     builder: (context, child) {
       final mode = store?.displayMode ?? 'auto';
@@ -302,5 +312,7 @@ class DuanjuApp extends StatelessWidget {
               ),
             ),
           ),
+        );
+      },
   );
 }

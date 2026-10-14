@@ -77,6 +77,204 @@ class PlayerControls extends StatefulWidget {
   State<PlayerControls> createState() => _PlayerControlsState();
 }
 
+class PlayerSidePill extends StatefulWidget {
+  const PlayerSidePill({
+    super.key,
+    required this.player,
+    required this.left,
+    required this.episodeLabel,
+    required this.showDanmaku,
+    required this.danmakuEnabled,
+    required this.locked,
+    required this.onTogglePlayback,
+    required this.onDanmaku,
+    required this.onRotate,
+    required this.onLock,
+    required this.onUnlock,
+  });
+
+  final Player player;
+  final bool left;
+  final String episodeLabel;
+  final bool showDanmaku;
+  final bool danmakuEnabled;
+  final bool locked;
+  final VoidCallback onTogglePlayback;
+  final VoidCallback? onDanmaku;
+  final VoidCallback onRotate;
+  final VoidCallback onLock;
+  final VoidCallback onUnlock;
+
+  @override
+  State<PlayerSidePill> createState() => _PlayerSidePillState();
+}
+
+class _PlayerSidePillState extends State<PlayerSidePill> {
+  String _label(Duration value) {
+    final total = value.inSeconds;
+    return '${total ~/ 60}:${(total % 60).toString().padLeft(2, '0')}';
+  }
+
+  Widget _pillButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onTap,
+    Color? color,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onTap,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(
+        icon,
+        size: 22,
+        color: color ?? Colors.white.withValues(alpha: 0.92),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pillColor = Colors.black.withValues(alpha: 0.45);
+    final align = widget.left
+        ? Alignment.centerLeft
+        : Alignment.centerRight;
+    if (widget.locked) {
+      return Align(
+        alignment: align,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 64, horizontal: 6),
+          child: Container(
+            decoration: BoxDecoration(
+              color: pillColor,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: IconButton(
+              tooltip: '解锁屏幕',
+              onPressed: widget.onUnlock,
+              icon: const Icon(
+                Icons.lock_open_rounded,
+                color: Color(0xFFFFB4A8),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return Align(
+      alignment: align,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: pillColor,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StreamBuilder<bool>(
+                stream: widget.player.stream.playing,
+                builder: (context, snapshot) {
+                  final playing =
+                      snapshot.data ?? widget.player.state.playing;
+                  return _pillButton(
+                    icon: playing
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    tooltip: playing ? '暂停' : '播放',
+                    onTap: widget.onTogglePlayback,
+                  );
+                },
+              ),
+              const SizedBox(height: 6),
+              Text(
+                widget.episodeLabel,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.white.withValues(alpha: 0.92),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: 30,
+                child: StreamBuilder<Duration>(
+                  stream: widget.player.stream.duration,
+                  builder: (context, durationSnapshot) {
+                    final duration =
+                        durationSnapshot.data ?? widget.player.state.duration;
+                    return StreamBuilder<Duration>(
+                      stream: widget.player.stream.position,
+                      builder: (context, positionSnapshot) {
+                        final position = positionSnapshot.data ??
+                            widget.player.state.position;
+                        final value = duration <= Duration.zero
+                            ? 0.0
+                            : (position.inMilliseconds /
+                                    duration.inMilliseconds)
+                                .clamp(0.0, 1.0)
+                                .toDouble();
+                        return Column(
+                          children: [
+                            Text(
+                              _label(position),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.white.withValues(alpha: 0.92),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: value,
+                              minHeight: 3,
+                              borderRadius: BorderRadius.circular(2),
+                              color: Theme.of(context).colorScheme.primary,
+                              backgroundColor: Colors.white24,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _label(duration),
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: Colors.white.withValues(alpha: 0.92),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (widget.showDanmaku)
+                _pillButton(
+                  icon: Icons.subtitles_rounded,
+                  tooltip: widget.danmakuEnabled ? '关闭弹幕' : '打开弹幕',
+                  onTap: widget.onDanmaku,
+                  color: widget.danmakuEnabled
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+              _pillButton(
+                icon: Icons.screen_rotation_alt_rounded,
+                tooltip: '横屏播放',
+                onTap: widget.onRotate,
+              ),
+              _pillButton(
+                icon: Icons.lock_outline_rounded,
+                tooltip: '锁定屏幕',
+                onTap: widget.onLock,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PlayerControlsState extends State<PlayerControls> {
   final List<StreamSubscription<dynamic>> _subscriptions = [];
   Timer? _hideTimer;
@@ -188,7 +386,7 @@ class _PlayerControlsState extends State<PlayerControls> {
   }
 
   void _tap() {
-    if (widget.interactions.suppressTap) return;
+    if (widget.interactions.suppressTap || widget.interactions.locked) return;
     widget.onFocusSurface();
     setState(() => _visible = !_visible);
     _scheduleHide();
@@ -245,7 +443,9 @@ class _PlayerControlsState extends State<PlayerControls> {
                 behavior: HitTestBehavior.opaque,
                 onTap: _tap,
                 onDoubleTap: () {
-                  if (!widget.enabled || widget.interactions.suppressTap) {
+                  if (!widget.enabled ||
+                      widget.interactions.suppressTap ||
+                      widget.interactions.locked) {
                     return;
                   }
                   widget.onTogglePlayback();

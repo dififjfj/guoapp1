@@ -33,6 +33,42 @@ abstract final class AppTheme {
     );
   }
 
+  static ThemeData theme(
+    Brightness brightness, {
+    ColorScheme? dynamicScheme,
+  }) {
+    if (dynamicScheme != null) {
+      return _dynamicTheme(brightness, dynamicScheme);
+    }
+    return brightness == Brightness.dark ? dark : light;
+  }
+
+  static ThemeData _dynamicTheme(Brightness brightness, ColorScheme scheme) {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scheme.surface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        centerTitle: false,
+        systemOverlayStyle: systemBars(brightness),
+      ),
+      dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: scheme.surfaceContainer,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
   static ThemeData _theme(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     final background = dark ? const Color(0xFF101114) : const Color(0xFFFAF8F6);

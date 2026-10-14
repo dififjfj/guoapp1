@@ -368,6 +368,8 @@ class LocalStore extends ChangeNotifier {
     return {'light', 'dark', 'system'}.contains(value) ? value! : 'system';
   }
 
+  bool get dynamicColor => !locked && (_bool('dynamicColor') ?? false);
+
   bool get autoExport => !locked && (_bool('autoExport') ?? false);
   bool get exportPosters => !locked && (_bool('exportPosters') ?? false);
   String get source {
@@ -541,6 +543,7 @@ class LocalStore extends ChangeNotifier {
       {'light', 'dark', 'system'}.contains(value)
       ? _setting('themeMode', value)
       : Future.value();
+  Future<void> setDynamicColor(bool value) => _setting('dynamicColor', value);
   Future<void> setPlaybackPreferences(PlaybackPreferences value) {
     PlaybackPreferences.fromJson(value.toJson());
     return _setting(_key('playback'), jsonEncode(value.toJson()));

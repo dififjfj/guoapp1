@@ -12,6 +12,7 @@ import 'background_downloads.dart';
 import 'local_store.dart';
 import 'profiles_screen.dart';
 import 'app_build.dart';
+import 'player_menu.dart';
 import 'sources_screen.dart';
 import 'widgets.dart';
 import 'resource_settings_screen.dart';
@@ -171,39 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showGestureHelp(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('手势操作说明'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('上半区长按：呼出播放菜单（选集/收藏/倍速/画质）'),
-              SizedBox(height: 8),
-              Text('下半区长按：临时 2 倍速，松手恢复'),
-              SizedBox(height: 8),
-              Text('长按后横滑：微调播放进度，松手跳转'),
-              SizedBox(height: 8),
-              Text('上下滑动：翻上一集 / 下一集'),
-              SizedBox(height: 8),
-              Text('左侧上下滑：调节屏幕亮度'),
-              SizedBox(height: 8),
-              Text('单击屏幕：播放 / 暂停'),
-              SizedBox(height: 8),
-              Text('播放页按钮：竖屏播放 / 旋转与全屏'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('知道了'),
-          ),
-        ],
-      ),
-    );
+    showPlayerGestureHelp(context);
   }
 
   @override
@@ -282,6 +251,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: Text(AppTheme.label(widget.store.themeMode)),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: _chooseTheme,
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.wallpaper_rounded),
+                title: const Text('动态取色'),
+                subtitle: const Text('跟随系统壁纸配色（Android 12+）'),
+                value: widget.store.dynamicColor,
+                onChanged: (value) => widget.store.setDynamicColor(value),
               ),
               ListTile(
                 leading: const Icon(Icons.people_outline),

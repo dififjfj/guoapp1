@@ -79,6 +79,7 @@ class PlayerInteractions extends ChangeNotifier {
   Timer? _hudTimer;
   double _sensitivity = 1.0;
   bool _haptics = true;
+  bool _locked = false;
   int _scrubDeltaMs = 0;
   Duration _scrubBase = Duration.zero;
 
@@ -90,6 +91,16 @@ class PlayerInteractions extends ChangeNotifier {
   set sensitivity(double value) => _sensitivity = value.clamp(0.5, 2.0);
   bool get haptics => _haptics;
   set haptics(bool value) => _haptics = value;
+
+  bool get locked => _locked;
+  set locked(bool value) {
+    if (_locked == value) return;
+    _locked = value;
+    if (value) {
+      _endHold(silent: true);
+      hint('');
+    }
+  }
 
   void setBrightnessDirect(double value) {
     if (_disposed) return;
@@ -138,6 +149,7 @@ class PlayerInteractions extends ChangeNotifier {
     if (!available() || _holdTimer != null || _boosting) return;
     _keyboardHold = keyboard;
     final upperHalf =
+        !locked &&
         !keyboard &&
         _origin != null &&
         _viewHeight > 0 &&
@@ -243,7 +255,7 @@ class PlayerInteractions extends ChangeNotifier {
     _pointer = event.pointer;
     _origin = _lastPosition = event.localPosition;
     _started = event.timeStamp;
-    _swipeEnabled = swipeEnabled && event.kind == PointerDeviceKind.touch;
+    _swipeEnabled = swipeEnabled && !_locked && event.kind == PointerDeviceKind.touch;
     _swipeThreshold =
         (math.max(30, math.min(80, height * .08)) / _sensitivity)
             .clamp(20.0, 110.0)
@@ -280,7 +292,8 @@ class PlayerInteractions extends ChangeNotifier {
     final diff = event.localPosition - _origin!;
     if (_boosting) {
       // 长按倍速期间：横滑微调进度，松手跳转；纵滑取消倍速
-      if (_viewWidth > 0 &&
+      if (!_locked &&
+          _viewWidth > 0 &&
           diff.dx.abs() >= diff.dy.abs() &&
           diff.dx.abs() > 12) {
         _moved = true;
