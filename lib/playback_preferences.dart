@@ -9,6 +9,9 @@ class PlaybackPreferences {
     this.autoAdvance = true,
     this.danmaku = true,
     this.preload = true,
+    this.controlBarRight = true,
+    this.gestureSensitivity = 1,
+    this.haptics = true,
     this.enhancement = const VideoEnhancementPreferences(),
   });
 
@@ -17,6 +20,9 @@ class PlaybackPreferences {
   final bool autoAdvance;
   final bool danmaku;
   final bool preload;
+  final bool controlBarRight;
+  final int gestureSensitivity;
+  final bool haptics;
   final VideoEnhancementPreferences enhancement;
 
   PlaybackPreferences copyWith({
@@ -25,6 +31,9 @@ class PlaybackPreferences {
     bool? autoAdvance,
     bool? danmaku,
     bool? preload,
+    bool? controlBarRight,
+    int? gestureSensitivity,
+    bool? haptics,
     VideoEnhancementPreferences? enhancement,
   }) => PlaybackPreferences(
     speed: speed ?? this.speed,
@@ -32,6 +41,9 @@ class PlaybackPreferences {
     autoAdvance: autoAdvance ?? this.autoAdvance,
     danmaku: danmaku ?? this.danmaku,
     preload: preload ?? this.preload,
+    controlBarRight: controlBarRight ?? this.controlBarRight,
+    gestureSensitivity: gestureSensitivity ?? this.gestureSensitivity,
+    haptics: haptics ?? this.haptics,
     enhancement: enhancement ?? this.enhancement,
   );
 
@@ -41,6 +53,9 @@ class PlaybackPreferences {
     'autoAdvance': autoAdvance,
     'danmaku': danmaku,
     'preload': preload,
+    'controlBarRight': controlBarRight,
+    'gestureSensitivity': gestureSensitivity,
+    'haptics': haptics,
     'enhancement': enhancement.toJson(),
   };
 
@@ -50,6 +65,9 @@ class PlaybackPreferences {
     final autoAdvance = value['autoAdvance'] as bool? ?? true;
     final danmaku = value['danmaku'] as bool? ?? true;
     final preload = value['preload'] as bool? ?? true;
+    final controlBarRight = value['controlBarRight'] as bool? ?? true;
+    final gestureSensitivity = value['gestureSensitivity'] as int? ?? 1;
+    final haptics = value['haptics'] as bool? ?? true;
     if (!playbackSpeeds.contains(speed) || quality < 0 || quality > 4320) {
       throw const FormatException('播放偏好无效');
     }
@@ -59,6 +77,9 @@ class PlaybackPreferences {
       autoAdvance: autoAdvance,
       danmaku: danmaku,
       preload: preload,
+      controlBarRight: controlBarRight,
+      gestureSensitivity: gestureSensitivity.clamp(0, 2),
+      haptics: haptics,
       enhancement: VideoEnhancementPreferences.fromJson(value['enhancement']),
     );
   }

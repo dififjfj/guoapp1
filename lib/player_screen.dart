@@ -106,6 +106,9 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _localFailure = false;
   bool _fullscreen = false;
   bool _portraitPlayback = false;
+  bool _controlBarLeft = false;
+  int _gestureSensitivity = 1;
+  bool _haptics = true;
   bool _automaticFullscreenSuppressed = false;
   bool _panelOpen = false;
   int _mobileTab = 0;
@@ -151,6 +154,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     autoAdvance: _autoAdvance,
     danmaku: _danmakuEnabled,
     preload: _preloadEnabled,
+    controlBarRight: !_controlBarLeft,
+    gestureSensitivity: _gestureSensitivity,
+    haptics: _haptics,
     enhancement: _enhancement.preferences,
   );
   String get _qualityLabel => _plan?.local == true
@@ -176,6 +182,9 @@ class _PlayerScreenState extends State<PlayerScreen>
     _autoAdvance = true;
     _danmakuEnabled = preferences.danmaku;
     _preloadEnabled = true;
+    _controlBarLeft = !preferences.controlBarRight;
+    _gestureSensitivity = preferences.gestureSensitivity;
+    _haptics = preferences.haptics;
     _loader = PlaybackLoader(widget.repository);
     _preloader = PlaybackPreloader(widget.repository);
     _danmaku = DanmakuController(widget.repository)
@@ -228,6 +237,9 @@ class _PlayerScreenState extends State<PlayerScreen>
         return '第 ${widget.detail.episodes[next].number} 集';
       },
     );
+    _interactions
+      ..sensitivity = const [0.7, 1.0, 1.4][_gestureSensitivity.clamp(0, 2)]
+      ..haptics = _haptics;
     _playerFocus.addListener(() {
       if (!_playerFocus.hasPrimaryFocus && !_closed) _interactions.cancel();
     });
@@ -1247,7 +1259,13 @@ class _PlayerScreenState extends State<PlayerScreen>
       _autoAdvance = true;
       _danmakuEnabled = nextPreferences.danmaku;
       _preloadEnabled = true;
+      _controlBarLeft = !nextPreferences.controlBarRight;
+      _gestureSensitivity = nextPreferences.gestureSensitivity;
+      _haptics = nextPreferences.haptics;
     });
+    _interactions
+      ..sensitivity = const [0.7, 1.0, 1.4][_gestureSensitivity.clamp(0, 2)]
+      ..haptics = _haptics;
     _danmaku.setEnabled(_danmakuEnabled);
     _syncDanmaku();
     if (qualityChanged) _preloader.clear();
@@ -1740,6 +1758,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ? _retryDanmakuFromControls
                 : null,
             onPush: widget.mediaId == null ? _pushToDevice : null,
+            controlBarLeft: _controlBarLeft,
             onPictureInPicture: _mobile
                 ? _enterPortraitPlayback
                 : (_canUsePictureInPicture ? _enterPictureInPicture : null),

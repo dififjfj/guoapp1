@@ -40,6 +40,7 @@ class PlayerControls extends StatefulWidget {
     this.onPush,
     this.onPictureInPicture,
     this.enhancement,
+    this.controlBarLeft = false,
   });
 
   final Player player;
@@ -70,6 +71,7 @@ class PlayerControls extends StatefulWidget {
   final Future<void> Function()? onPush;
   final Future<void> Function()? onPictureInPicture;
   final VideoEnhancementController? enhancement;
+  final bool controlBarLeft;
 
   @override
   State<PlayerControls> createState() => _PlayerControlsState();
@@ -701,7 +703,9 @@ class _PlayerControlsState extends State<PlayerControls> {
     if (tools.isEmpty) return const SizedBox.shrink();
     if (tools.length <= 5) {
       return Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: widget.controlBarLeft
+            ? MainAxisAlignment.start
+            : MainAxisAlignment.end,
         children: [_toolGroup(tools)],
       );
     }

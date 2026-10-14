@@ -132,6 +132,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _toggleControlBarSide() async {
+    await widget.store.setPlaybackPreferences(
+      widget.store.playbackPreferences.copyWith(
+        controlBarRight: !widget.store.playbackPreferences.controlBarRight,
+      ),
+    );
+  }
+
+  Future<void> _chooseGestureSensitivity() async {
+    final current = widget.store.playbackPreferences.gestureSensitivity;
+    if (!mounted) return;
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('手势灵敏度'),
+        children: [
+          for (var i = 0; i < 3; i++)
+            RadioListTile<int>(
+              value: i,
+              groupValue: current,
+              title: Text(const ['低', '中', '高'][i]),
+              onChanged: (value) => Navigator.pop(context, value),
+            ),
+        ],
+      ),
+    );
+    if (selected == null || selected == current) return;
+    await widget.store.setPlaybackPreferences(
+      widget.store.playbackPreferences.copyWith(gestureSensitivity: selected),
+    );
+  }
+
+  Future<void> _setHaptics(bool value) async {
+    await widget.store.setPlaybackPreferences(
+      widget.store.playbackPreferences.copyWith(haptics: value),
+    );
+  }
+
+  void _showGestureHelp(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('手势操作说明'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('上半区长按：呼出播放菜单（选集/收藏/倍速/画质）'),
+              SizedBox(height: 8),
+              Text('下半区长按：临时 2 倍速，松手恢复'),
+              SizedBox(height: 8),
+              Text('长按后横滑：微调播放进度，松手跳转'),
+              SizedBox(height: 8),
+              Text('上下滑动：翻上一集 / 下一集'),
+              SizedBox(height: 8),
+              Text('左侧上下滑：调节屏幕亮度'),
+              SizedBox(height: 8),
+              Text('单击屏幕：播放 / 暂停'),
+              SizedBox(height: 8),
+              Text('播放页按钮：竖屏播放 / 旋转与全屏'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('知道了'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: widget.store,
@@ -167,6 +241,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+              ListTile(
+                leading: const Icon(Icons.dock),
+                title: const Text('控制栏位置'),
+                subtitle: Text(
+                  widget.store.playbackPreferences.controlBarRight
+                      ? '右侧'
+                      : '左侧',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: _toggleControlBarSide,
+              ),
+              ListTile(
+                leading: const Icon(Icons.speed_rounded),
+                title: const Text('手势灵敏度'),
+                subtitle: Text(
+                  const ['低', '中', '高'][widget.store.playbackPreferences.gestureSensitivity.clamp(0, 2)],
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: _chooseGestureSensitivity,
+              ),
+              SwitchListTile(
+                secondary: const Icon(Icons.vibration_rounded),
+                title: const Text('触感反馈'),
+                subtitle: const Text('手势操作时震动提示'),
+                value: widget.store.playbackPreferences.haptics,
+                onChanged: _setHaptics,
+              ),
+              ListTile(
+                leading: const Icon(Icons.touch_app_rounded),
+                title: const Text('手势操作说明'),
+                subtitle: const Text('查看播放器全部手势'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => _showGestureHelp(context),
+              ),
               ListTile(
                 key: const ValueKey('theme-setting'),
                 leading: const Icon(Icons.palette_outlined),
