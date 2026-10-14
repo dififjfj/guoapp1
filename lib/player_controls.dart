@@ -903,9 +903,7 @@ class _PlayerControlsState extends State<PlayerControls> {
     if (tools.isEmpty) return const SizedBox.shrink();
     if (tools.length <= 5) {
       return Row(
-        mainAxisAlignment: widget.controlBarLeft
-            ? MainAxisAlignment.start
-            : MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [_toolGroup(tools)],
       );
     }

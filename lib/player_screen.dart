@@ -1794,10 +1794,10 @@ class _PlayerScreenState extends State<PlayerScreen>
       children: [
         if (!hideOverlayForPictureInPicture)
           DanmakuOverlay(controller: _danmaku, aspectRatio: _aspectRatio),
-        if (_mobile && !_showFullscreen)
+        if (_mobile && _showFullscreen)
           PlayerSidePill(
             player: _player,
-            left: false,
+            left: _controlBarLeft,
             episodeLabel:
                 '${widget.detail.episodes[_index].number} / ${widget.detail.episodes.length}',
             showDanmaku: widget.detail.drama.source == 'hongguo',

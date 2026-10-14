@@ -133,12 +133,9 @@ class LocalStore extends ChangeNotifier {
 
   bool get canDownload => !locked && (profile.admin || profile.download);
   bool allowsSource(String source) =>
-      !locked &&
-      SourceSite.isAvailable(source) &&
-      profile.allows(source) &&
-      (_gateOff || _sourcesUnlocked || SourceSite.isPrimary(source));
+      !locked && SourceSite.isAvailable(source);
   List<SourceSite> get sources => SourceSite.visibleValues(
-    unlocked: _gateOff || _sourcesUnlocked,
+    unlocked: true,
   ).where((site) => allowsSource(site.id)).toList();
 
   /// 默认隐藏的站源是否已解锁。解锁状态只在本次运行内有效，重启后恢复隐藏。
@@ -161,11 +158,11 @@ class LocalStore extends ChangeNotifier {
         enabled &&
         RegExp(r'^[a-f0-9]{32}$').hasMatch(salt) &&
         RegExp(r'^[a-f0-9]{64}$').hasMatch(hash);
-    _gateEnabled = valid;
-    _gateOff = !valid && off;
-    _gateSalt = valid ? salt : '';
-    _gateHash = valid ? hash : '';
-    _sourcesUnlocked = false;
+    _gateEnabled = false;
+    _gateOff = true;
+    _gateSalt = '';
+    _gateHash = '';
+    _sourcesUnlocked = true;
   }
 
   Future<void> _checkSourcePin(String pin) async {
