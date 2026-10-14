@@ -571,6 +571,26 @@ class _PlayerScreenState extends State<PlayerScreen>
     } catch (_) {}
   }
 
+  /// 侧边胶囊「横屏播放」：无论视频比例，强制横屏全屏
+  Future<void> _enterLandscapePlayback() async {
+    if (_rotating || _television || _closed) {
+      return;
+    }
+    _interactions.cancel();
+    if (!mounted) return;
+    setState(() {
+      _portraitPlayback = false;
+      _fullscreen = true;
+      _automaticFullscreenSuppressed = true;
+    });
+    try {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+    } catch (_) {}
+  }
+
   Map<String, int>? _pictureInPictureSourceRect() {
     final paneContext = _videoPaneKey.currentContext;
     final renderObject = paneContext?.findRenderObject();
@@ -1777,7 +1797,7 @@ class _PlayerScreenState extends State<PlayerScreen>
         if (_mobile && !_showFullscreen)
           PlayerSidePill(
             player: _player,
-            left: _controlBarLeft,
+            left: false,
             episodeLabel:
                 '${widget.detail.episodes[_index].number} / ${widget.detail.episodes.length}',
             showDanmaku: widget.detail.drama.source == 'hongguo',
@@ -1787,7 +1807,7 @@ class _PlayerScreenState extends State<PlayerScreen>
             onDanmaku: widget.detail.drama.source == 'hongguo'
                 ? _toggleDanmaku
                 : null,
-            onRotate: _rotate,
+            onRotate: _enterLandscapePlayback,
             onLock: () {
               _interactions.cancel();
               setState(() => _locked = true);

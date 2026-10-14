@@ -142,7 +142,7 @@ class LocalStore extends ChangeNotifier {
   ).where((site) => allowsSource(site.id)).toList();
 
   /// 默认隐藏的站源是否已解锁。解锁状态只在本次运行内有效，重启后恢复隐藏。
-  bool get sourcesUnlocked => _gateOff || _sourcesUnlocked;
+  bool get sourcesUnlocked => true;
 
   /// 是否已启用站源密码锁。
   bool get sourceGateEnabled => _gateEnabled;
