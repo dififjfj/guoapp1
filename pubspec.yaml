@@ -23,7 +23,6 @@ dependencies:
   ffmpeg_kit_flutter_new_min_gpl: 2.6.2
   file_picker: 13.1.0
   crypto: ^3.0.7
-  dynamic_color: ">=1.7.0 <3.0.0"
   window_manager: ^0.5.1
   nsd: 5.0.1
 
