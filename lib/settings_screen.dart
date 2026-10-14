@@ -252,13 +252,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: _chooseTheme,
               ),
-              SwitchListTile(
-                secondary: const Icon(Icons.wallpaper_rounded),
-                title: const Text('动态取色'),
-                subtitle: const Text('跟随系统壁纸配色（Android 12+）'),
-                value: widget.store.dynamicColor,
-                onChanged: (value) => widget.store.setDynamicColor(value),
-              ),
+
               ListTile(
                 leading: const Icon(Icons.people_outline),
                 title: const Text('用户管理'),
