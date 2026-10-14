@@ -789,8 +789,8 @@ class _PlayerControlsState extends State<PlayerControls> {
       if (widget.onPictureInPicture != null)
         _toolIcon(
           key: const ValueKey('player-picture-in-picture'),
-          tooltip: '画中画',
-          icon: Icons.picture_in_picture_alt_rounded,
+          tooltip: '竖屏播放',
+          icon: Icons.stay_current_portrait,
           onPressed: widget.enabled
               ? () => _panel(widget.onPictureInPicture!)
               : null,

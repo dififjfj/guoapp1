@@ -28,6 +28,7 @@ class PlayerInteractions extends ChangeNotifier {
     required this.onTogglePlayback,
     required this.onFullscreen,
     required this.onEpisode,
+    this.onMenu,
     this.onSeek,
   }) {
     _playing = player.stream.playing.listen((playing) {
@@ -47,6 +48,7 @@ class PlayerInteractions extends ChangeNotifier {
   final VoidCallback onTogglePlayback;
   final VoidCallback onFullscreen;
   final String Function(int direction) onEpisode;
+  final VoidCallback? onMenu;
   final Future<void> Function(Duration)? onSeek;
   late final StreamSubscription<bool> _playing;
   Timer? _holdTimer;
@@ -75,10 +77,19 @@ class PlayerInteractions extends ChangeNotifier {
   double _viewWidth = 0.0;
   double _viewHeight = 0.0;
   Timer? _hudTimer;
+  double _sensitivity = 1.0;
+  bool _haptics = true;
+  int _scrubDeltaMs = 0;
+  Duration _scrubBase = Duration.zero;
 
   GestureHudState get hudState => _hudState;
   double get brightness => _brightness;
   bool get isBrightnessActive => _hudState.type == SwipeAction.brightness;
+
+  double get sensitivity => _sensitivity;
+  set sensitivity(double value) => _sensitivity = value.clamp(0.5, 2.0);
+  bool get haptics => _haptics;
+  set haptics(bool value) => _haptics = value;
 
   void setBrightnessDirect(double value) {
     if (_disposed) return;
@@ -104,7 +115,7 @@ class PlayerInteractions extends ChangeNotifier {
     }
     if (!persistent && message.isNotEmpty) {
       _hintTimer = Timer(const Duration(milliseconds: 1200), () {
-        hint(_boosting ? '3 倍速 · 松开恢复' : '', persistent: true);
+        hint(_boosting ? '2 倍速 · 松开恢复' : '', persistent: true);
       });
     }
   }
@@ -126,22 +137,50 @@ class PlayerInteractions extends ChangeNotifier {
   void _beginHold({bool keyboard = false}) {
     if (!available() || _holdTimer != null || _boosting) return;
     _keyboardHold = keyboard;
-    _holdTimer = Timer(const Duration(milliseconds: 350), () {
-      _holdTimer = null;
-      if (_disposed ||
-          !available() ||
-          !player.state.playing ||
-          player.state.completed) {
-        return;
-      }
-      _boosting = true;
-      _held = true;
-      unawaited(_setRate(3));
-      hint('3 倍速 · 松开恢复', persistent: true);
-    });
+    final upperHalf =
+        !keyboard &&
+        _origin != null &&
+        _viewHeight > 0 &&
+        _origin!.dy < _viewHeight * 0.5;
+    _holdTimer = Timer(
+      Duration(milliseconds: (350 / _sensitivity).round().clamp(180, 600)),
+      () {
+        _holdTimer = null;
+        if (_disposed ||
+            !available() ||
+            !player.state.playing ||
+            player.state.completed) {
+          return;
+        }
+        _held = true;
+        if (upperHalf) {
+          // 上半区长按：呼出播放菜单（选集/收藏/倍速）
+          if (_haptics) unawaited(HapticFeedback.mediumImpact());
+          final menu = onMenu;
+          if (menu != null) {
+            hint('');
+            menu();
+          } else {
+            _boosting = true;
+            unawaited(_setRate(2));
+            hint('2 倍速 · 松开恢复', persistent: true);
+          }
+          return;
+        }
+        // 下半区长按：临时 2 倍速，松手恢复
+        _boosting = true;
+        if (_haptics) unawaited(HapticFeedback.lightImpact());
+        unawaited(_setRate(2));
+        hint('2 倍速 · 松开恢复', persistent: true);
+      },
+    );
   }
 
-  void _endHold({bool tap = false, bool silent = false}) {
+  void _endHold({
+    bool tap = false,
+    bool silent = false,
+    bool applyScrub = true,
+  }) {
     final wasKeyboard = _keyboardHold;
     final boosted = _boosting;
     _holdTimer?.cancel();
@@ -149,11 +188,29 @@ class PlayerInteractions extends ChangeNotifier {
     _keyboardHold = false;
     _boosting = false;
     if (boosted) {
+      if (applyScrub && _scrubDeltaMs != 0) {
+        final target = _scrubTarget();
+        if (target != null) {
+          unawaited((onSeek ?? player.seek)(target));
+          if (!silent) hint('已跳转');
+        }
+      }
+      _scrubDeltaMs = 0;
+      _scrubBase = Duration.zero;
       unawaited(_setRate(baseSpeed()));
       if (!silent) hint('恢复 ${baseSpeed()} 倍速');
     } else if (tap && wasKeyboard) {
       seek(5);
     }
+  }
+
+  Duration? _scrubTarget() {
+    if (!available()) return null;
+    final duration = player.state.duration;
+    if (duration <= Duration.zero) return null;
+    final milliseconds = (_scrubBase.inMilliseconds + _scrubDeltaMs)
+        .clamp(0, duration.inMilliseconds);
+    return Duration(milliseconds: milliseconds);
   }
 
   void cancel() {
@@ -166,6 +223,8 @@ class PlayerInteractions extends ChangeNotifier {
     _origin = null;
     _lastPosition = null;
     _endHold(silent: true);
+    _scrubDeltaMs = 0;
+    _scrubBase = Duration.zero;
     hint('');
   }
 
@@ -185,11 +244,16 @@ class PlayerInteractions extends ChangeNotifier {
     _origin = _lastPosition = event.localPosition;
     _started = event.timeStamp;
     _swipeEnabled = swipeEnabled && event.kind == PointerDeviceKind.touch;
-    _swipeThreshold = math.max(30, math.min(80, height * .08));
+    _swipeThreshold =
+        (math.max(30, math.min(80, height * .08)) / _sensitivity)
+            .clamp(20.0, 110.0)
+            .toDouble();
     _viewWidth = width;
     _viewHeight = height;
     _moved = _held = false;
     _swipeAction = SwipeAction.none;
+    _scrubDeltaMs = 0;
+    _scrubBase = Duration.zero;
 
     if (_swipeEnabled && width > 0) {
       // 判定触摸落点：
@@ -214,6 +278,36 @@ class PlayerInteractions extends ChangeNotifier {
     if (_pointer != event.pointer || _origin == null) return;
     _lastPosition = event.localPosition;
     final diff = event.localPosition - _origin!;
+    if (_boosting) {
+      // 长按倍速期间：横滑微调进度，松手跳转；纵滑取消倍速
+      if (_viewWidth > 0 &&
+          diff.dx.abs() >= diff.dy.abs() &&
+          diff.dx.abs() > 12) {
+        _moved = true;
+        if (_scrubDeltaMs == 0) {
+          _scrubBase = player.state.position;
+        }
+        final durationMs = player.state.duration.inMilliseconds;
+        if (durationMs > 0) {
+          final perPixel =
+              (durationMs / (_viewWidth * 1.2)).clamp(20.0, 400.0) *
+                  _sensitivity;
+          _scrubDeltaMs = (diff.dx * perPixel).round();
+          final target = _scrubTarget();
+          if (target != null) {
+            hint(
+              '${_scrubDeltaMs > 0 ? '快进' : '快退'}至 '
+              '${formatPosition(target.inMilliseconds / 1000)}',
+              persistent: true,
+            );
+          }
+        }
+      } else if (diff.dy.abs() > _swipeThreshold) {
+        _moved = true;
+        _endHold(applyScrub: false);
+      }
+      return;
+    }
     if (diff.distance > 12) {
       _moved = true;
       _endHold();
@@ -247,7 +341,10 @@ class PlayerInteractions extends ChangeNotifier {
         _moved &&
         isVertical &&
         event.timeStamp - _started < const Duration(milliseconds: 1500)) {
-      if (available()) hint(onEpisode(delta.dy < 0 ? 1 : -1));
+      if (available()) {
+        if (_haptics) unawaited(HapticFeedback.selectionClick());
+        hint(onEpisode(delta.dy < 0 ? 1 : -1));
+      }
     } else if (_swipeAction == SwipeAction.brightness) {
       _scheduleDismissHud();
     }

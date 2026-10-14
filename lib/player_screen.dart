@@ -105,6 +105,7 @@ class _PlayerScreenState extends State<PlayerScreen>
   bool _forceOnline = false;
   bool _localFailure = false;
   bool _fullscreen = false;
+  bool _portraitPlayback = false;
   bool _automaticFullscreenSuppressed = false;
   bool _panelOpen = false;
   int _mobileTab = 0;
@@ -218,6 +219,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       onTogglePlayback: _togglePlayback,
       onSeek: _seekTo,
       onFullscreen: _rotate,
+      onMenu: () => _openPanel(PlayerMenuSection.episodes),
       onEpisode: (direction) {
         final next = _index + direction;
         if (next < 0) return '已经是第一集';
@@ -520,6 +522,40 @@ class _PlayerScreenState extends State<PlayerScreen>
       _setPictureInPictureStatus(supported: false, requested: false);
       _notice('当前平台不支持画中画');
     }
+  }
+
+  /// 竖屏播放：锁定竖屏方向的全屏播放（替代画中画入口）
+  Future<void> _enterPortraitPlayback() async {
+    if (_closed || _loading || _error != null || _panelOpen) {
+      return;
+    }
+    _interactions.cancel();
+    if (!mounted) return;
+    setState(() {
+      _portraitPlayback = true;
+      _fullscreen = true;
+      _automaticFullscreenSuppressed = true;
+    });
+    try {
+      await SystemChrome.setPreferredOrientations(const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+    } catch (_) {}
+  }
+
+  Future<void> _exitPortraitPlayback() async {
+    if (!_portraitPlayback) return;
+    _interactions.cancel();
+    if (!mounted) return;
+    setState(() {
+      _portraitPlayback = false;
+      _fullscreen = false;
+      _automaticFullscreenSuppressed = false;
+    });
+    try {
+      await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+    } catch (_) {}
   }
 
   Map<String, int>? _pictureInPictureSourceRect() {
@@ -1140,6 +1176,10 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (_rotating || _television) {
       return;
     }
+    if (_portraitPlayback) {
+      await _exitPortraitPlayback();
+      return;
+    }
     final fullscreen = !_showFullscreen;
     final previous = _fullscreen;
     final previousSuppressed = _automaticFullscreenSuppressed;
@@ -1487,6 +1527,12 @@ class _PlayerScreenState extends State<PlayerScreen>
     if (Platform.isWindows) {
       unawaited(windowManager.setFullScreen(false));
     } else if (_mobile || _television && Platform.isAndroid) {
+      if (_portraitPlayback) {
+        unawaited(
+          SystemChrome.setPreferredOrientations(DeviceOrientation.values)
+              .catchError((Object _) {}),
+        );
+      }
       unawaited(
         (_orientationController?.releasePlayback(this) ??
                 SystemChrome.setPreferredOrientations(
@@ -1694,9 +1740,9 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ? _retryDanmakuFromControls
                 : null,
             onPush: widget.mediaId == null ? _pushToDevice : null,
-            onPictureInPicture: _canUsePictureInPicture
-                ? _enterPictureInPicture
-                : null,
+            onPictureInPicture: _mobile
+                ? _enterPortraitPlayback
+                : (_canUsePictureInPicture ? _enterPictureInPicture : null),
             onPrevious: _index > 0 ? () => _play(_index - 1) : null,
             onNext: _index + 1 < widget.detail.episodes.length
                 ? () => _play(_index + 1)
