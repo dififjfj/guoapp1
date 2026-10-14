@@ -1731,7 +1731,7 @@ class _PlayerScreenState extends State<PlayerScreen>
     final title =
         '${widget.detail.drama.title} · 第 ${widget.detail.episodes[_index].number} 集${_plan?.local == true ? ' · 本地' : ''}${widget.detail.episodes[_index].vip ? ' · VIP 试看' : ''}${(_plan?.routeIndex ?? 0) > 0 ? ' · 线路 ${_plan!.routeIndex + 1}' : ''}';
     final hideOverlayForPictureInPicture = _pictureInPictureVisible;
-    final Widget controls = hideOverlayForPictureInPicture || _locked
+    final Widget controls = hideOverlayForPictureInPicture
         ? const SizedBox.shrink()
         : _television
         ? TelevisionControls(
@@ -1780,6 +1780,7 @@ class _PlayerScreenState extends State<PlayerScreen>
                 ? _retryDanmakuFromControls
                 : null,
             onPush: widget.mediaId == null ? _pushToDevice : null,
+            hidden: _locked,
             controlBarLeft: _controlBarLeft,
             onPictureInPicture: _mobile
                 ? _enterPortraitPlayback

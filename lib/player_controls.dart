@@ -41,6 +41,7 @@ class PlayerControls extends StatefulWidget {
     this.onPictureInPicture,
     this.enhancement,
     this.controlBarLeft = false,
+    this.hidden = false,
   });
 
   final Player player;
@@ -72,6 +73,7 @@ class PlayerControls extends StatefulWidget {
   final Future<void> Function()? onPictureInPicture;
   final VideoEnhancementController? enhancement;
   final bool controlBarLeft;
+  final bool hidden;
 
   @override
   State<PlayerControls> createState() => _PlayerControlsState();
@@ -133,12 +135,77 @@ class _PlayerSidePillState extends State<PlayerSidePill> {
     );
   }
 
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  bool _playing = false;
+  Timer? _ticker;
+  bool _collapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _playing = widget.player.state.playing;
+    _duration = widget.player.state.duration;
+    _position = widget.player.state.position;
+    _ticker = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!mounted) return;
+      final position = widget.player.state.position;
+      final duration = widget.player.state.duration;
+      final playing = widget.player.state.playing;
+      if (position == _position &&
+          duration == _duration &&
+          playing == _playing) {
+        return;
+      }
+      setState(() {
+        _position = position;
+        _duration = duration;
+        _playing = playing;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final pillColor = Colors.black.withValues(alpha: 0.45);
     final align = widget.left
         ? Alignment.centerLeft
         : Alignment.centerRight;
+    if (_collapsed) {
+      return Align(
+        alignment: align,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _collapsed = false),
+          child: Container(
+            width: 18,
+            height: 88,
+            margin: const EdgeInsets.symmetric(vertical: 64),
+            decoration: BoxDecoration(
+              color: pillColor,
+              borderRadius: BorderRadius.horizontal(
+                left: widget.left ? const Radius.circular(8) : Radius.zero,
+                right: widget.left ? Radius.zero : const Radius.circular(8),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              widget.left
+                  ? Icons.chevron_left_rounded
+                  : Icons.chevron_right_rounded,
+              size: 16,
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+          ),
+        ),
+      );
+    }
     if (widget.locked) {
       return Align(
         alignment: align,
@@ -174,19 +241,19 @@ class _PlayerSidePillState extends State<PlayerSidePill> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              StreamBuilder<bool>(
-                stream: widget.player.stream.playing,
-                builder: (context, snapshot) {
-                  final playing =
-                      snapshot.data ?? widget.player.state.playing;
-                  return _pillButton(
-                    icon: playing
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    tooltip: playing ? '暂停' : '播放',
-                    onTap: widget.onTogglePlayback,
-                  );
-                },
+              _pillButton(
+                icon: widget.left
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                tooltip: '收起胶囊',
+                onTap: () => setState(() => _collapsed = true),
+              ),
+              _pillButton(
+                icon: _playing
+                    ? Icons.pause_rounded
+                    : Icons.play_arrow_rounded,
+                tooltip: _playing ? '暂停' : '播放',
+                onTap: widget.onTogglePlayback,
               ),
               const SizedBox(height: 6),
               Text(
@@ -199,52 +266,37 @@ class _PlayerSidePillState extends State<PlayerSidePill> {
               const SizedBox(height: 6),
               SizedBox(
                 width: 30,
-                child: StreamBuilder<Duration>(
-                  stream: widget.player.stream.duration,
-                  builder: (context, durationSnapshot) {
-                    final duration =
-                        durationSnapshot.data ?? widget.player.state.duration;
-                    return StreamBuilder<Duration>(
-                      stream: widget.player.stream.position,
-                      builder: (context, positionSnapshot) {
-                        final position = positionSnapshot.data ??
-                            widget.player.state.position;
-                        final value = duration <= Duration.zero
-                            ? 0.0
-                            : (position.inMilliseconds /
-                                    duration.inMilliseconds)
-                                .clamp(0.0, 1.0)
-                                .toDouble();
-                        return Column(
-                          children: [
-                            Text(
-                              _label(position),
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.white.withValues(alpha: 0.92),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: value,
-                              minHeight: 3,
-                              borderRadius: BorderRadius.circular(2),
-                              color: Theme.of(context).colorScheme.primary,
-                              backgroundColor: Colors.white24,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _label(duration),
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: Colors.white.withValues(alpha: 0.92),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
+                child: Column(
+                  children: [
+                    Text(
+                      _label(_position),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.white.withValues(alpha: 0.92),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: _duration <= Duration.zero
+                          ? 0.0
+                          : (_position.inMilliseconds /
+                                  _duration.inMilliseconds)
+                              .clamp(0.0, 1.0)
+                              .toDouble(),
+                      minHeight: 3,
+                      borderRadius: BorderRadius.circular(2),
+                      color: Theme.of(context).colorScheme.primary,
+                      backgroundColor: Colors.white24,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _label(_duration),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.white.withValues(alpha: 0.92),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 6),
@@ -415,8 +467,8 @@ class _PlayerControlsState extends State<PlayerControls> {
     final duration = state.duration.inMilliseconds / 1000;
     final position = state.position.inMilliseconds / 1000;
     final buffered = state.buffer.inMilliseconds / 1000;
-    final visible =
-        _visible || !state.playing || state.buffering || widget.panelOpen;
+    final visible = !widget.hidden &&
+        (_visible || !state.playing || state.buffering || widget.panelOpen);
     return MouseRegion(
       onHover: (_) => _show(),
       cursor: visible ? SystemMouseCursors.basic : SystemMouseCursors.none,
@@ -453,7 +505,7 @@ class _PlayerControlsState extends State<PlayerControls> {
                 },
               ),
             ),
-            if (state.buffering && widget.enabled)
+            if (!widget.hidden && state.buffering && widget.enabled)
               const IgnorePointer(
                 child: Center(child: CircularProgressIndicator()),
               ),
