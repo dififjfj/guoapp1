@@ -1794,6 +1794,7 @@ class _PlayerScreenState extends State<PlayerScreen>
       children: [
         if (!hideOverlayForPictureInPicture)
           DanmakuOverlay(controller: _danmaku, aspectRatio: _aspectRatio),
+        controls,
         if (_mobile && _showFullscreen)
           PlayerSidePill(
             player: _player,
@@ -1814,7 +1815,6 @@ class _PlayerScreenState extends State<PlayerScreen>
             },
             onUnlock: () => setState(() => _locked = false),
           ),
-        controls,
       ],
     );
     return Theme(
